@@ -62,9 +62,9 @@ pipeline {
             echo "Pipeline succeeded — build #${env.BUILD_NUMBER} deployed on port ${HOST_PORT}."
             script {
                 if (env.JIRA_ISSUE) {
-                    jiraAddComment(
-                        idOrKey: env.JIRA_ISSUE,
-                        comment: "✅ Build #${env.BUILD_NUMBER} deployed successfully on port ${HOST_PORT}. ${env.BUILD_URL}"
+                    jiraComment(
+                        issueKey: env.JIRA_ISSUE,
+                        body: "✅ Build #${env.BUILD_NUMBER} deployed successfully on port ${HOST_PORT}. ${env.BUILD_URL}"
                     )
                 }
             }
@@ -73,9 +73,9 @@ pipeline {
             echo "Pipeline failed — check stage logs above."
             script {
                 if (env.JIRA_ISSUE) {
-                    jiraAddComment(
-                        idOrKey: env.JIRA_ISSUE,
-                        comment: "❌ Build #${env.BUILD_NUMBER} failed. Check logs: ${env.BUILD_URL}"
+                    jiraComment(
+                        issueKey: env.JIRA_ISSUE,
+                        body: "❌ Build #${env.BUILD_NUMBER} failed. Check logs: ${env.BUILD_URL}"
                     )
                 }
             }
