@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    parameters {
+        booleanParam(name: 'ENABLE_SECURITY_GATES', defaultValue: true,
+            description: 'Run Gitleaks secrets scan and Trivy dependency/image scans.')
+    }
     environment {
         IMAGE_NAME     = "node-app-cicd"
         CONTAINER_NAME = "node-app-cicd-container"
@@ -29,11 +33,43 @@ pipeline {
             }
         }
 
+        stage('Secrets Scan - Gitleaks') {
+            when { expression { return params.ENABLE_SECURITY_GATES } }
+            steps {
+                sh '''
+                    docker run --rm -v $(pwd):/repo zricethezav/gitleaks:latest \
+                      detect --source=/repo --no-git -v --exit-code 1 || \
+                      (echo "Secrets detected — failing build" && exit 1)
+                '''
+            }
+        }
+
+        stage('Dependency Scan - Trivy') {
+            when { expression { return params.ENABLE_SECURITY_GATES } }
+            steps {
+                sh '''
+                    docker run --rm -v $(pwd):/app aquasec/trivy:latest fs \
+                      --severity HIGH,CRITICAL --exit-code 0 /app
+                '''
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest ."
             }
         }
+        stage('Container Image Scan - Trivy') {
+            when { expression { return params.ENABLE_SECURITY_GATES } }
+            steps {
+                sh '''
+                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                      aquasec/trivy:latest image \
+                      --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
         stage('Deploy') {
             steps {
                 sh """
