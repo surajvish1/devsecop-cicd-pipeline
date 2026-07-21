@@ -1,7 +1,7 @@
 
 # Node.js CICD Deployment with GitLab Self-Hosted Runner on AWS EC2
 
-This project demonstrates a CI/CD pipeline for a Node.js app using GitLab with a self-hosted runner on an EC2 instance.
+This project demonstrates a CI/CD pipeline for a Node.js app using Jenkins with a self-hosted runner on an EC2 instance.
 
 ## Project Overview
 
