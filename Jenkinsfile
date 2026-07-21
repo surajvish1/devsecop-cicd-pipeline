@@ -1,24 +1,31 @@
 pipeline {
     agent any
-
     environment {
         IMAGE_NAME     = "node-app-cicd"
         CONTAINER_NAME = "node-app-cicd-container"
         HOST_PORT      = "5000"   // port exposed on the EC2 host (8080=Jenkins, 3000=Grafana, 9090=Prometheus reserved for later)
         CONTAINER_PORT = "8080"  // port the app listens on inside the container (matches Dockerfile EXPOSE)
     }
-
     options {
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
-
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Extract Jira Issue') {
+            steps {
+                script {
+                    def commitMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    def matcher = commitMsg =~ /([A-Z]+-\d+)/
+                    env.JIRA_ISSUE = matcher ? matcher[0][0] : null
+                    echo "Detected Jira issue: ${env.JIRA_ISSUE}"
+                }
             }
         }
 
@@ -27,7 +34,6 @@ pipeline {
                 sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest ."
             }
         }
-
         stage('Deploy') {
             steps {
                 sh """
@@ -37,7 +43,6 @@ pipeline {
                 """
             }
         }
-
         stage('Health Check') {
             steps {
                 sh """
@@ -52,13 +57,28 @@ pipeline {
             }
         }
     }
-
     post {
         success {
             echo "Pipeline succeeded — build #${env.BUILD_NUMBER} deployed on port ${HOST_PORT}."
+            script {
+                if (env.JIRA_ISSUE) {
+                    jiraComment(
+                        issueKey: env.JIRA_ISSUE,
+                        body: "✅ Build #${env.BUILD_NUMBER} deployed successfully on port ${HOST_PORT}. ${env.BUILD_URL}"
+                    )
+                }
+            }
         }
         failure {
             echo "Pipeline failed — check stage logs above."
+            script {
+                if (env.JIRA_ISSUE) {
+                    jiraComment(
+                        issueKey: env.JIRA_ISSUE,
+                        body: "❌ Build #${env.BUILD_NUMBER} failed. Check logs: ${env.BUILD_URL}"
+                    )
+                }
+            }
         }
     }
 }
