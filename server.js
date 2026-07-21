@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
       </head>
       <body>
         <h1>🚀 Node.js CI/CD Demo</h1>
-        <p>This app is running with custom styles for CI/CD DevSecOp presentation! by suraaj using Jenkins</p>
+        <p>This app is running with custom styles for CI/CD DevSecOp presentation! by SURAJ using Jenkins</p>
       </body>
     </html>
   `);
